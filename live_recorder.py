@@ -167,12 +167,12 @@ class LiveRecoder:
     def run_ffmpeg(self, filename, format):
         logger.info(f'{self.flag}开始ffmpeg封装：{filename}')
         new_filename = filename.replace(f'.{format}', f'.{self.format}')
-        ffmpeg.input(f'{self.output}/{filename}').output(
-            f'{self.output}/{new_filename}',
-            codec='copy',
-            map_metadata='-1',
-            movflags='faststart'
-        ).global_args('-hide_banner').run()
+        ffmpeg.input(f"{self.output}/{filename}", flags="global_header").output(
+            f"{self.output}/{new_filename}",
+            codec="copy",
+            map_metadata="-1",
+            movflags="faststart",
+        ).global_args("-hide_banner").run()
         os.remove(f'{self.output}/{filename}')
 
 
