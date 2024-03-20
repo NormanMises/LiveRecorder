@@ -1,4 +1,4 @@
-<img src="https://socialify.git.ci/auqhjjqdo/LiveRecorder/image?font=Inter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Auto" alt="LiveRecorder"/>
+<img src="https://socialify.git.ci/NormanMises/LiveRecorder/image?font=Inter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Auto" alt="LiveRecorder"/>
 
 ## 简介
 
@@ -38,7 +38,7 @@
 
 当前支持Windows, Mac和Linux平台（amd64架构），请前往Release下载对应平台的可执行程序
 
-[Release下载页面](https://github.com/auqhjjqdo/LiveRecorder/releases)
+[Release下载页面](https://github.com/NormanMises/LiveRecorder/releases)
 
 下载解压后修改配置，直接运行二进制文件即可
 
@@ -48,7 +48,7 @@
 
 ```shell
 # 下载源码（没有git可以直接从release下载Source code）
-git clone https://github.com/auqhjjqdo/LiveRecorder.git
+git clone https://github.com/NormanMises/LiveRecorder.git
 cd LiveRecorder
 # 安装依赖
 python3 -m pip install .
@@ -81,6 +81,10 @@ python3 live_recorder.py
 路径分隔符请使用`/`，防止出现转义导致的不兼容问题
 
 支持相对路径和绝对路径，例如`output/video`、`/tmp/output`、`D:/output`
+
+### Pandalive默认Cookies配置
+
+`Pandalive_cookies`字段为Pandalive默认的Cookies，非必填字段，格式为`xxxx=xxxxx; xxxx=xxxxx`
 
 ### 直播录制配置
 
