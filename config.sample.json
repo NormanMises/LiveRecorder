@@ -1,6 +1,7 @@
 {
   "proxy": "http://127.0.0.1:7890",
   "output": "output",
+  "Pandalive_cookies":"xxxxxxx",
   "user": [
     {
       "platform": "Bilibili",

@@ -82,6 +82,10 @@ python3 live_recorder.py
 
 支持相对路径和绝对路径，例如`output/video`、`/tmp/output`、`D:/output`
 
+### Pandalive默认Cookies配置
+
+`Pandalive_cookies`字段为Pandalive默认的Cookies，非必填字段，格式为`xxxx=xxxxx; xxxx=xxxxx`
+
 ### 直播录制配置
 
 按照示例修改`user`列表，注意逗号、引号和缩进
