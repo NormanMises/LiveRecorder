@@ -1,5 +1,5 @@
 @echo off
-cls
 :download
+cls
 python "live_recorder.py"
 goto :download

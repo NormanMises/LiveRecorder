@@ -44,26 +44,52 @@ class LiveRecoder:
             self.cookies = user.get("cookies")
         # self.cookies = user.get("cookies", config.get("Pandalive_cookies"))
 
+        if "Pandalive_proxy" in config:
+            self.proxy = config.get("Pandalive_proxy")
+        elif "Afreeca_proxy" in config:
+            self.proxy = config.get("Afreeca_proxy")
+        elif "Twitch_proxy" in config:
+            self.proxy = config.get("Twitch_proxy")
+        else:
+            self.proxy = user.get("proxy", config.get("proxy"))
+        
         self.format = user.get("format")
-        self.proxy = user.get("proxy", config.get("proxy"))
-        self.output = user.get("output", config.get("output", "output"))
+
+        if "Pandalive_output" in config:
+            self.output = config.get("Pandalive_output")
+        elif "Afreeca_output" in config:
+            self.output = config.get("Afreeca_output")
+        elif "Twitch_output" in config:
+            self.output = config.get("Twitch_output")
+        else:
+            self.output = user.get("output", config.get("output", "output"))
 
         self.get_cookies()
         self.client = self.get_client()
 
     async def start(self):
         logger.info(f"{self.flag} 正在检测直播状态")
-        while True:
-            try:
-                await self.run()
-                await asyncio.sleep(self.interval)
-            except ConnectionError as error:
-                if "直播检测请求协议错误" not in str(error):
-                    logger.error(error)
-                await self.client.aclose()
-                self.client = self.get_client()
-            except Exception as error:
-                logger.exception(f"{self.flag} 直播检测错误\n{repr(error)}")
+        try:
+            while True:
+                try:
+                    await self.run()
+                    await asyncio.sleep(self.interval)
+                except ConnectionError as error:
+                    if "直播检测请求协议错误" not in str(error):
+                        logger.error(error)
+                    await self.client.aclose()
+                    self.client = self.get_client()
+                except Exception as error:
+                    logger.exception(f"{self.flag} 直播检测错误\n{repr(error)}")
+        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            logger.info(f"{self.flag} 接收到终止信号，正在关闭")
+        finally:
+            await self.client.aclose()
+            for url in list(recording.keys()):
+                stream_fd, output = recording.pop(url)
+                stream_fd.close()
+                output.close()
+            logger.info(f"{self.flag} 直播监控结束，资源已清理")
 
     async def run(self):
         pass
@@ -139,19 +165,26 @@ class LiveRecoder:
         return session
 
     def run_record(self, stream: Union[StreamIO, HTTPStream], url, modelname, format):
+        # 如果不存在则创建，否则不创建
+        if not os.path.exists(os.path.join(self.output, modelname)):
+            os.makedirs(os.path.join(self.output, modelname))
         # 获取输出文件名
-        filename = f"{modelname}/" + self.get_filename(modelname, format)
-        if stream:
-            logger.info(f"{self.flag} 开始录制：{filename}")
-            # 调用streamlink录制直播
-            result = self.stream_writer(stream, url, filename)
-            # 录制成功、format配置存在且不等于直播平台默认格式时运行ffmpeg封装
-            if result and self.format and self.format != format:
-                self.run_ffmpeg(filename, format)
+        # filename = f"{modelname}/" + self.get_filename(modelname, format)
+        filename = self.get_filename(modelname, format)
+        try:
+            if stream:
+                logger.info(f"{self.flag} 开始录制：{filename}")
+                # 调用streamlink录制直播
+                result = self.stream_writer(stream, url, filename)
+                # 录制成功、format配置存在且不等于直播平台默认格式时运行ffmpeg封装
+                if result and self.format and self.format != format:
+                    self.run_ffmpeg(filename, format)
+                logger.info(f"{self.flag} 停止录制：{filename}")
+            else:
+                logger.error(f"{self.flag} 无可用直播源：{filename}")
+        finally:
             recording.pop(url, None)
             logger.info(f"{self.flag} 停止录制：{filename}")
-        else:
-            logger.error(f"{self.flag} 无可用直播源：{filename}")
 
     def stream_writer(self, stream, url, filename):
         logger.info(f"{self.flag} 获取到直播流链接：{filename}\n{stream.url}")
@@ -426,8 +459,9 @@ class Afreeca(LiveRecoder):
                     data={"bid": self.id},
                 )
             ).json()
+            # ic(response)
             if response["CHANNEL"]["RESULT"] != 0:
-                modelname = response["CHANNEL"]["BJID"]
+                modelname = self.id
                 stream = (
                     self.get_streamlink().streams(url).get("best")
                 )  # HLSStream[mpegts]
