@@ -38,31 +38,13 @@ class LiveRecoder:
         self.interval = user.get("interval", 10)
         self.headers = user.get("headers", {"User-Agent": "Chrome"})
 
-        if "Pandalive_cookies" in config:
-            self.cookies = config.get("Pandalive_cookies")
-        else:
-            self.cookies = user.get("cookies")
-        # self.cookies = user.get("cookies", config.get("Pandalive_cookies"))
+        self.cookies = user.get("cookies",config.get("Pandalive_cookies"))
 
-        if "Pandalive_proxy" in config:
-            self.proxy = config.get("Pandalive_proxy")
-        elif "Afreeca_proxy" in config:
-            self.proxy = config.get("Afreeca_proxy")
-        elif "Twitch_proxy" in config:
-            self.proxy = config.get("Twitch_proxy")
-        else:
-            self.proxy = user.get("proxy", config.get("proxy"))
+        self.proxy = user.get("proxy", config.get(f"{platform}_proxy", config.get("proxy")))
         
         self.format = user.get("format")
 
-        if "Pandalive_output" in config:
-            self.output = config.get("Pandalive_output")
-        elif "Afreeca_output" in config:
-            self.output = config.get("Afreeca_output")
-        elif "Twitch_output" in config:
-            self.output = config.get("Twitch_output")
-        else:
-            self.output = user.get("output", config.get("output", "output"))
+        self.output = user.get("output", config.get(f"{platform}_output", config.get("output", "output")))
 
         self.get_cookies()
         self.client = self.get_client()
