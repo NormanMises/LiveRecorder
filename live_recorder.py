@@ -35,7 +35,7 @@ class LiveRecoder:
         name = user.get("name", self.id)
         self.flag = f"{platform} {name}"
 
-        self.interval = user.get("interval", 10)
+        self.interval = user.get("interval", config.get("interval", 15))
         self.headers = user.get("headers", {"User-Agent": "Chrome"})
 
         self.cookies = user.get("cookies",config.get("Pandalive_cookies"))
@@ -236,11 +236,11 @@ class Douyu(LiveRecoder):
                 )
             ).json()
             if response["data"]["room_status"] == "1":
-                title = response["data"]["room_name"]
+                modelname = response["data"]["owner_name"]
                 stream = HTTPStream(
                     self.get_streamlink(), await self.get_live()
                 )  # HTTPStream[flv]
-                await asyncio.to_thread(self.run_record, stream, url, title, "flv")
+                await asyncio.to_thread(self.run_record, stream, url, modelname, "flv")
 
     async def get_js(self):
         response = (
