@@ -151,8 +151,8 @@ class LiveRecoder:
         if not os.path.exists(os.path.join(self.output, modelname)):
             os.makedirs(os.path.join(self.output, modelname))
         # 获取输出文件名
-        # filename = f"{modelname}/" + self.get_filename(modelname, format)
-        filename = self.get_filename(modelname, format)
+        filename = f"{modelname}/" + self.get_filename(modelname, format)
+        # filename = self.get_filename(modelname, format)
         try:
             if stream:
                 logger.info(f"{self.flag} 开始录制：{filename}")
