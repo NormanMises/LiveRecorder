@@ -311,11 +311,17 @@ class Douyin(LiveRecoder):
             ).json()
             if data := response["data"]["data"]:
                 data = data[0]
-                if data["status"] == 2:
-                    title = data["title"]
+                if data['status'] == 2:
+                    title = data['title']
+                    live_url = ''
+                    stream_data = json.loads(data['stream_url']['live_core_sdk_data']['pull_data']['stream_data'])
+                    for quality_code in ('origin', 'uhd', 'hd', 'sd', 'md', 'ld'):
+                        if quality_data := stream_data['data'].get(quality_code):
+                            live_url = quality_data['main']['flv']
+                            break
                     stream = HTTPStream(
                         self.get_streamlink(),
-                        data["stream_url"]["flv_pull_url"]["FULL_HD1"],
+                        live_url
                     )  # HTTPStream[flv]
                     await asyncio.to_thread(self.run_record, stream, url, title, "flv")
 
@@ -493,21 +499,47 @@ class Bigolive(LiveRecoder):
 
 class Pixivsketch(LiveRecoder):
     async def run(self):
-        url = f"https://sketch.pixiv.net/{self.id}"
+        url = f'https://sketch.pixiv.net/{self.id}'
         if url not in recording:
-            response = (await self.request(method="GET", url=url)).text
-            next_data = json.loads(
-                re.search(r'<script id="__NEXT_DATA__".*?>(.*?)</script>', response)[1]
-            )
-            initial_state = json.loads(next_data["props"]["pageProps"]["initialState"])
-            if lives := initial_state["live"]["lives"]:
+            response = (await self.request(
+                method='GET',
+                url=url
+            )).text
+            next_data = json.loads(re.search(r'<script id="__NEXT_DATA__".*?>(.*?)</script>', response)[1])
+            initial_state = json.loads(next_data['props']['pageProps']['initialState'])
+            if lives := initial_state['live']['lives']:
                 live = list(lives.values())[0]
-                title = live["name"]
+                title = live['name']
                 streams = HLSStream.parse_variant_playlist(
-                    session=self.get_streamlink(), url=live["owner"]["hls_movie"]
+                    session=self.get_streamlink(),
+                    url=live['owner']['hls_movie']
                 )
                 stream = list(streams.values())[0]  # HLSStream[mpegts]
-                await asyncio.to_thread(self.run_record, stream, url, title, "ts")
+                await asyncio.to_thread(self.run_record, stream, url, title, 'ts')
+
+
+class Chaturbate(LiveRecoder):
+    async def run(self):
+        url = f'https://chaturbate.com/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='POST',
+                url='https://chaturbate.com/get_edge_hls_url_ajax/',
+                headers={
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                data={
+                    'room_slug': self.id
+                }
+            )).json()
+            if response['room_status'] == 'public':
+                title = self.id
+                streams = HLSStream.parse_variant_playlist(
+                    session=self.get_streamlink(),
+                    url=response['url']
+                )
+                stream = list(streams.values())[2]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'ts')
 
 
 async def run():
