@@ -564,7 +564,7 @@ class Stripchat(LiveRecoder):
             )).json()  # 发送GET请求并解析JSON响应
 
             if not response:
-                logger.info("Not a valid url.")  # 如果响应为空，记录日志并返回
+                # logger.info("Not a valid url.")  # 如果响应为空，记录日志并返回
                 return
 
             self.author = self.id  # 设置作者为直播间ID
@@ -577,7 +577,7 @@ class Stripchat(LiveRecoder):
             server1 = f"https://edge-hls.doppiocdn.org/hls/{response['cam']['streamName']}/master/{response['cam']['streamName']}_auto.m3u8?playlistType=standard"
             server2 = f"https://b-{response['cam']['viewServers']['flashphoner-hls']}.doppiocdn.org/hls/{response['cam']['streamName']}/{response['cam']['streamName']}.m3u8"
 
-            logger.info(f"Stream status: {response['user']['user']['status']}")  # 记录流媒体状态
+            # logger.info(f"Stream status: {response['user']['user']['status']}")  # 记录流媒体状态
 
             if response["user"]["user"]["isLive"] and response["user"]["user"]["status"] == "public" and server:
                 try:
