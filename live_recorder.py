@@ -546,6 +546,66 @@ class Chaturbate(LiveRecoder):
                 await asyncio.to_thread(self.run_record, stream, url, modelname, 'ts')
 
 
+class Stripchat(LiveRecoder):
+    async def run(self):
+        url = f'https://stripchat.com/{self.id}'  # 构建直播间的URL
+        if url not in recording:
+            api_url = f"https://stripchat.com/api/front/v2/models/username/{self.id}/cam"  # 构建API请求的URL
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": url,
+            }
+
+            response = (await self.request(
+                method='GET',
+                url=api_url,
+                headers=headers
+            )).json()  # 发送GET请求并解析JSON响应
+
+            if not response:
+                logger.info("Not a valid url.")  # 如果响应为空，记录日志并返回
+                return
+
+            self.author = self.id  # 设置作者为直播间ID
+            self.title = response["cam"]["topic"]  # 设置标题为直播间主题
+
+            # 构建不同的流媒体服务器URL
+            server = f"https://b-{response['cam']['viewServers']['flashphoner-hls']}.doppiocdn.com/hls/{response['cam']['streamName']}/master/{response['cam']['streamName']}_auto.m3u8?playlistType=standard"
+            server_src = f"https://b-{response['cam']['viewServers']['flashphoner-hls']}.doppiocdn.com/hls/{response['cam']['streamName']}/master/{response['cam']['streamName']}.m3u8?playlistType=standard"
+            server0 = f"https://edge-hls.doppiocdn.com/hls/{response['cam']['streamName']}/master/{response['cam']['streamName']}_auto.m3u8?playlistType=standard"
+            server1 = f"https://edge-hls.doppiocdn.org/hls/{response['cam']['streamName']}/master/{response['cam']['streamName']}_auto.m3u8?playlistType=standard"
+            server2 = f"https://b-{response['cam']['viewServers']['flashphoner-hls']}.doppiocdn.org/hls/{response['cam']['streamName']}/{response['cam']['streamName']}.m3u8"
+
+            logger.info(f"Stream status: {response['user']['user']['status']}")  # 记录流媒体状态
+
+            if response["user"]["user"]["isLive"] and response["user"]["user"]["status"] == "public" and server:
+                try:
+                    logger.info(f"trying server {server}")  # 尝试第一个服务器
+                    streams = HLSStream.parse_variant_playlist(self.get_streamlink(), server, headers={'Referer': url})
+                    for s in streams.items():
+                        await asyncio.to_thread(self.run_record, s[1], url, self.id, 'ts')
+                    streams_src = HLSStream.parse_variant_playlist(self.get_streamlink(), server_src, headers={'Referer': url})
+                    for s in streams_src.items():
+                        await asyncio.to_thread(self.run_record, s[1], url, self.id, 'ts')
+                except IOError as err:
+                    try:
+                        logger.info(f"trying fallback server {server0}")  # 尝试备用服务器0
+                        streams0 = HLSStream.parse_variant_playlist(self.get_streamlink(), server0, headers={'Referer': url})
+                        for s in streams0.items():
+                            await asyncio.to_thread(self.run_record, s[1], url, self.id, 'ts')
+                    except IOError as err:
+                        try:
+                            logger.info(f"trying another fallback server {server1}")  # 尝试备用服务器1
+                            streams1 = HLSStream.parse_variant_playlist(self.get_streamlink(), server1, headers={'Referer': url})
+                            for s in streams1.items():
+                                await asyncio.to_thread(self.run_record, s[1], url, self.id, 'ts')
+                        except IOError as err:
+                            logger.info(f"fallback to default stream : {server2}")  # 尝试备用服务器2
+                            stream = HLSStream(self.get_streamlink(), server2)
+                            await asyncio.to_thread(self.run_record, stream, url, self.id, 'ts')
+
+
 async def run():
     with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
