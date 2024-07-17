@@ -31,22 +31,27 @@ recording: Dict[str, Tuple[StreamIO, FileOutput]] = {}
 class LiveRecoder:
     def __init__(self, config: dict, user: dict):
         self.id = user["id"]
-        platform = user["platform"]
-        name = user.get("name", self.id)
-        self.flag = f"{platform} {name}"
+        
+        self.name = user.get("name", "").strip()
+        
+        self.platform = user["platform"]
+        
+        self.flag = f"{self.platform} {self.name}"
 
         self.interval = user.get("interval", config.get("interval", 15))
-        self.headers = user.get("headers", {"User-Agent": "Chrome"})
+
+        self.headers = user.get("headers", {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"})
 
         self.cookies = user.get("cookies",config.get("Pandalive_cookies"))
 
-        self.proxy = user.get("proxy", config.get(f"{platform}_proxy", config.get("proxy")))
+        self.proxy = user.get("proxy", config.get(f"{self.platform}_proxy", config.get("proxy")))
         
         self.format = user.get("format")
 
-        self.output = user.get("output", config.get(f"{platform}_output", config.get("output", "output")))
+        self.output = user.get("output", config.get(f"{self.platform}_output", config.get("output", "output")))
 
         self.get_cookies()
+
         self.client = self.get_client()
 
     async def start(self):
@@ -237,6 +242,8 @@ class Douyu(LiveRecoder):
             ).json()
             if response["data"]["room_status"] == "1":
                 modelname = response["data"]["owner_name"]
+                if self.name:
+                    modelname = self.name
                 stream = HTTPStream(
                     self.get_streamlink(), await self.get_live()
                 )  # HTTPStream[flv]
@@ -391,6 +398,8 @@ class Twitch(LiveRecoder):
             ).json()
             if response[0]["data"]["user"]["stream"]:
                 modelname = self.id
+                if self.name:
+                    modelname = self.name
                 options = Options()
                 options.set("disable-ads", True)
                 stream = (
@@ -450,6 +459,8 @@ class Afreeca(LiveRecoder):
             # ic(response)
             if response["CHANNEL"]["RESULT"] != 0:
                 modelname = self.id
+                if self.name:
+                    modelname = self.name
                 stream = (
                     self.get_streamlink().streams(url).get("best")
                 )  # HLSStream[mpegts]
@@ -472,6 +483,8 @@ class Pandalive(LiveRecoder):
                 modelname = (
                     f"{response['media']['userNick']} ({response['media']['userId']})"
                 )
+                if self.name:
+                    modelname = self.name
                 stream = (
                     self.get_streamlink().streams(url).get("best")
                 )  # HLSStream[mpegts]
@@ -490,11 +503,15 @@ class Bigolive(LiveRecoder):
                 )
             ).json()
             if response["data"]["alive"]:
-                title = response["data"]["roomTopic"]
+                clientBigoId = response["data"]["clientBigoId"]
+                country_code = response["data"]["country_code"]
+                modelname = f"{country_code}_{clientBigoId}"
+                if self.name:
+                    modelname = self.name
                 stream = HLSStream(
                     session=self.get_streamlink(), url=response["data"]["hls_src"]
                 )  # HLSStream[mpegts]
-                await asyncio.to_thread(self.run_record, stream, url, title, "ts")
+                await asyncio.to_thread(self.run_record, stream, url, modelname, "ts")
 
 
 class Pixivsketch(LiveRecoder):
@@ -538,6 +555,8 @@ class Chaturbate(LiveRecoder):
 
             if response and response['room_status'] == 'public':
                 modelname = self.id
+                if self.name:
+                    modelname = self.name
                 streams = HLSStream.parse_variant_playlist(
                     session=self.get_streamlink(),
                     url=response['url']
@@ -606,8 +625,8 @@ class Stripchat(LiveRecoder):
                             await asyncio.to_thread(self.run_record, stream, url, self.id, 'ts')
 
 
-async def run():
-    with open("config.json", "r", encoding="utf-8") as f:
+async def run(config_path):
+    with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
     try:
         tasks = []
@@ -624,6 +643,11 @@ async def run():
 
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python live_recorder.py <config_file>")
+        sys.exit(1)
+    config_path = sys.argv[1]
     logger.add(
         sink="logs/log_{time:YYYY-MM-DD}.log",
         rotation="00:00",
@@ -632,4 +656,4 @@ if __name__ == "__main__":
         encoding="utf-8",
         format="[{time:YYYY-MM-DD HH:mm:ss}][{level}][{name}][{function}:{line}]{message}",
     )
-    asyncio.run(run())
+    asyncio.run(run(config_path))
